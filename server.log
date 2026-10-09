@@ -1,0 +1,13 @@
+
+> distrochat@2.0.0 start
+> node server.js
+
+[db] MONGODB_URI not provided or in test mode: using in-memory MongoDB server
+[db] Connected to MongoDB
+[startup] Created the General room
+=======================================================
+   MIKKO SOCIAL CHAT PLATFORM — RUNNING
+=======================================================
+   Local: http://localhost:5000
+   Admin: http://localhost:5000/admin-panel/login
+=======================================================

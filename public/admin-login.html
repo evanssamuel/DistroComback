@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Admin — DistroChat</title>
+<link rel="icon" type="image/png" href="/favicon.png"/>
+<style>
+  :root {
+    --bg: #0b0d12; --card: #11141b; --border: #232733; --text: #e8eaf0;
+    --text2: #8b90a0; --accent: #02bba5; --danger: #e05260;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  .card {
+    width: 100%; max-width: 360px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px; margin: 16px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.sub { color: var(--text2); font-size: 13px; margin: 0 0 24px; }
+  input {
+    width: 100%; background: #0e1016; border: 1px solid var(--border); color: var(--text);
+    padding: 12px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 14px;
+  }
+  .pw-wrap { position: relative; }
+  .pw-wrap input { padding-right: 44px; }
+  .pw-toggle {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text2); cursor: pointer; padding: 4px;
+    width: auto; margin: 0;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  button {
+    width: 100%; background: var(--accent); color: white; border: none; padding: 12px;
+    border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .err {
+    display: none; background: rgba(224,82,96,0.12); color: var(--danger);
+    border: 1px solid rgba(224,82,96,0.3); padding: 10px 12px; border-radius: 10px;
+    font-size: 13px; margin-bottom: 14px;
+  }
+</style>
+</head>
+<body>
+  <form class="card" id="login-form">
+    <h1>Admin access</h1>
+    <p class="sub">This area isn't linked anywhere in the app.</p>
+    <div class="err" id="err"></div>
+    <div class="pw-wrap">
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password" autofocus/>
+      <button type="button" class="pw-toggle" id="pw-toggle" onclick="togglePw()">👁</button>
+    </div>
+    <button type="submit" id="btn">Sign in</button>
+  </form>
+
+  <script>
+    function togglePw() {
+      const input = document.getElementById('password');
+      const btn = document.getElementById('pw-toggle');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.textContent = show ? '🙈' : '👁';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn');
+      const err = document.getElementById('err');
+      err.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Checking...';
+      try {
+        const res = await fetch(window.location.pathname, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: document.getElementById('password').value })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          window.location.href = window.location.pathname.replace(/\/login$/, '');
+        } else {
+          err.textContent = data.error || 'Login failed.';
+          err.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Sign in';
+        }
+      } catch (e) {
+        err.textContent = 'Could not reach the server.';
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+      }
+    });
+  </script>
+</body>
+</html>

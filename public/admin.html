@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Admin — DistroChat</title>
+<link rel="icon" type="image/png" href="/favicon.png"/>
+<style>
+  :root {
+    --bg: #0b0d12; --card: #11141b; --surface2: #171b25; --border: #232733;
+    --text: #e8eaf0; --text2: #8b90a0; --text3: #5c6172;
+    --accent: #02bba5; --danger: #e05260; --green: #2ecc71; --amber: #f0a93a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 16px; margin: 0; }
+  header h1 span { color: var(--text2); font-weight: 400; }
+  #logout { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+
+  nav { display: flex; gap: 4px; padding: 12px 24px 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  nav button {
+    background: none; border: none; color: var(--text2); padding: 10px 16px; font-size: 13.5px;
+    font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  nav button.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  .tab { display: none; }
+  .tab.active { display: block; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+  .stat-card .num { font-size: 28px; font-weight: 700; }
+  .stat-card .label { color: var(--text2); font-size: 12.5px; margin-top: 4px; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  th, td { text-align: left; padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text2); font-weight: 600; background: var(--surface2); }
+  tr:last-child td { border-bottom: none; }
+  td.muted { color: var(--text3); }
+
+  .btn { background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; font-size: 12.5px; cursor: pointer; margin-right: 6px; }
+  .btn:hover { background: #1e2330; }
+  .btn-danger { color: var(--danger); border-color: rgba(224,82,96,0.3); }
+  .btn-amber { color: var(--amber); border-color: rgba(240,169,58,0.3); }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-locked { background: rgba(240,169,58,0.15); color: var(--amber); }
+  .badge-general { background: rgba(108,92,231,0.15); color: var(--accent); }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .toolbar input, .toolbar select { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 9px 12px; border-radius: 8px; font-size: 13px; }
+
+  .modform { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  .modform label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text2); }
+  .modform input, .modform select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+  .modform button { background: var(--accent); color: white; border: none; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; height: 37px; }
+
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border); padding: 10px 18px; border-radius: 20px; font-size: 13px; display: none; z-index: 50; }
+  .empty { color: var(--text3); font-size: 13px; padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>DistroChat <span>· Admin</span></h1>
+    <button id="logout">Log out</button>
+  </header>
+
+  <nav>
+    <button class="active" data-tab="overview">Overview</button>
+    <button data-tab="rooms">Rooms</button>
+    <button data-tab="moderation">Moderation</button>
+    <button data-tab="bans">Bans &amp; Mutes</button>
+    <button data-tab="audit">Audit Log</button>
+  </nav>
+
+  <main>
+    <section class="tab active" id="tab-overview">
+      <div class="stat-grid" id="stat-grid"></div>
+    </section>
+
+    <section class="tab" id="tab-rooms">
+      <table>
+        <thead><tr><th>Room</th><th>Messages</th><th>Online</th><th>Last active</th><th></th></tr></thead>
+        <tbody id="rooms-body"></tbody>
+      </table>
+
+      <h3 style="font-size:14px;margin:24px 0 10px;">Blocked room codes</h3>
+      <p style="font-size:12.5px;color:var(--text2);margin-bottom:12px;">A blocked code can never be used for a new room, even after the room using it is deleted.</p>
+      <div class="modform">
+        <label>Room code<input type="text" id="block-code-input" placeholder="e.g. K7XPQ2" style="text-transform:uppercase;"/></label>
+        <label>Reason (optional)<input type="text" id="block-code-reason" placeholder="Why"/></label>
+        <button onclick="submitBlockCode()">Block</button>
+      </div>
+      <table>
+        <thead><tr><th>Code</th><th>Reason</th><th>Blocked</th><th></th></tr></thead>
+        <tbody id="blocked-codes-body"></tbody>
+      </table>
+    </section>
+
+    <section class="tab" id="tab-moderation">
+      <div class="toolbar">
+        <select id="mod-room-filter"><option value="">All rooms</option></select>
+        <input type="text" id="mod-search" placeholder="Search message text..."/>
+        <button class="btn" onclick="loadMessages()">Search</button>
+      </div>
+      <table>
+        <thead><tr><th>Room</th><th>User</th><th>Message</th><th>Time</th><th></th></tr></thead>
+        <tbody id="messages-body"></tbody>
+      </table>
+    </section>
+
+    <section class="tab" id="tab-bans">
+      <div class="modform">
+        <label>Username<input type="text" id="ban-username" placeholder="e.g. troll42"/></label>
+        <label>Room code (or ALL)<input type="text" id="ban-room" placeholder="e.g. K7XPQ2 or ALL"/></label>
+        <label>Action
+          <select id="ban-type">
+            <option value="ban">Ban (permanent)</option>
+            <option value="mute">Mute (temporary)</option>
+          </select>
+        </label>
+        <label id="mute-minutes-wrap">Minutes<input type="number" id="mute-minutes" value="30" min="1"/></label>
+        <label>Reason (optional)<input type="text" id="ban-reason" placeholder="Why"/></label>
+        <button onclick="submitBan()">Apply</button>
+      </div>
+      <table>
+        <thead><tr><th>Username</th><th>Scope</th><th>Type</th><th>Expires</th><th></th></tr></thead>
+        <tbody id="bans-body"></tbody>
+      </table>
+    </section>
+
+    <section class="tab" id="tab-audit">
+      <table>
+        <thead><tr><th>Action</th><th>Details</th><th>When</th></tr></thead>
+        <tbody id="audit-body"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="toast"></div>
+
+  <script>
+    // ── Tabs ──
+    document.querySelectorAll('nav button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+        if (btn.dataset.tab === 'overview') loadStats();
+        if (btn.dataset.tab === 'rooms') { loadRooms(); loadBlockedCodes(); }
+        if (btn.dataset.tab === 'moderation') loadMessages();
+        if (btn.dataset.tab === 'bans') loadBans();
+        if (btn.dataset.tab === 'audit') loadAudit();
+      });
+    });
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 2200);
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function api(url, opts) {
+      const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...opts });
+      if (res.status === 401) { window.location.href = window.location.pathname + '/login'; throw new Error('unauthorized'); }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    // ── Overview ──
+    async function loadStats() {
+      try {
+        const s = await api('/api/admin/stats');
+        document.getElementById('stat-grid').innerHTML = `
+          <div class="stat-card"><div class="num">${s.onlineNow}</div><div class="label">Online right now</div></div>
+          <div class="stat-card"><div class="num">${s.totalRooms}</div><div class="label">Total rooms</div></div>
+          <div class="stat-card"><div class="num">${s.messagesToday}</div><div class="label">Messages today</div></div>
+          <div class="stat-card"><div class="num">${s.totalMessages}</div><div class="label">Messages all-time</div></div>`;
+      } catch (e) { toast(e.message); }
+    }
+
+    // ── Rooms ──
+    async function loadRooms() {
+      try {
+        const rooms = await api('/api/admin/rooms');
+        const filterEl = document.getElementById('mod-room-filter');
+        filterEl.innerHTML = '<option value="">All rooms</option>' + rooms.map(r => `<option value="${r.roomId}">${esc(r.name)}</option>`).join('');
+
+        document.getElementById('rooms-body').innerHTML = rooms.map(r => `
+          <tr>
+            <td>${esc(r.name)} ${r.isGeneral ? '<span class="badge badge-general">General</span>' : ''} ${r.locked ? '<span class="badge badge-locked">Locked</span>' : ''}<div class="muted" style="font-size:11px;">${r.roomId}</div></td>
+            <td>${r.messageCount}</td>
+            <td>${r.onlineCount}</td>
+            <td class="muted">${fmtDate(r.lastActivityAt)}</td>
+            <td>
+              <button class="btn" onclick="toggleLock('${r.roomId}', ${!r.locked})">${r.locked ? 'Unlock' : 'Lock'}</button>
+              <button class="btn btn-amber" onclick="clearRoom('${r.roomId}')">Clear</button>
+              ${r.isGeneral ? '' : `<button class="btn btn-danger" onclick="deleteRoom('${r.roomId}')">Delete</button>`}
+            </td>
+          </tr>`).join('') || '<tr><td colspan="5" class="empty">No rooms yet</td></tr>';
+      } catch (e) { toast(e.message); }
+    }
+
+    async function clearRoom(roomId) {
+      if (!confirm('Delete every message in this room? The room itself stays, just emptied.')) return;
+      try { const r = await api(`/api/admin/rooms/${roomId}/messages`, { method: 'DELETE' }); toast(`Cleared ${r.deleted} message(s)`); loadRooms(); }
+      catch (e) { toast(e.message); }
+    }
+
+    // ── Blocked room codes ──
+    async function loadBlockedCodes() {
+      try {
+        const codes = await api('/api/admin/blocked-codes');
+        document.getElementById('blocked-codes-body').innerHTML = codes.map(c => `
+          <tr>
+            <td>${esc(c.code)}</td>
+            <td class="muted">${esc(c.reason || '—')}</td>
+            <td class="muted">${fmtDate(c.createdAt)}</td>
+            <td><button class="btn" onclick="unblockCode('${c._id}')">Unblock</button></td>
+          </tr>`).join('') || '<tr><td colspan="4" class="empty">No codes blocked</td></tr>';
+      } catch (e) { toast(e.message); }
+    }
+
+    async function submitBlockCode() {
+      const code = document.getElementById('block-code-input').value.trim().toUpperCase();
+      const reason = document.getElementById('block-code-reason').value.trim();
+      if (!code) return toast('Enter a room code to block.');
+      try {
+        await api('/api/admin/blocked-codes', { method: 'POST', body: JSON.stringify({ code, reason }) });
+        toast('Code blocked');
+        document.getElementById('block-code-input').value = '';
+        document.getElementById('block-code-reason').value = '';
+        loadBlockedCodes();
+      } catch (e) { toast(e.message); }
+    }
+
+    async function unblockCode(id) {
+      try { await api(`/api/admin/blocked-codes/${id}`, { method: 'DELETE' }); toast('Unblocked'); loadBlockedCodes(); }
+      catch (e) { toast(e.message); }
+    }
+
+    async function toggleLock(roomId, locked) {
+      try { await api(`/api/admin/rooms/${roomId}`, { method: 'PATCH', body: JSON.stringify({ locked }) }); toast(locked ? 'Room locked' : 'Room unlocked'); loadRooms(); }
+      catch (e) { toast(e.message); }
+    }
+
+    async function deleteRoom(roomId) {
+      if (!confirm('Delete this room and all its messages? This can\\'t be undone.')) return;
+      try { await api(`/api/admin/rooms/${roomId}`, { method: 'DELETE' }); toast('Room deleted'); loadRooms(); }
+      catch (e) { toast(e.message); }
+    }
+
+    // ── Moderation ──
+    async function loadMessages() {
+      try {
+        const roomId = document.getElementById('mod-room-filter').value;
+        const search = document.getElementById('mod-search').value.trim();
+        const params = new URLSearchParams();
+        if (roomId) params.set('roomId', roomId);
+        if (search) params.set('search', search);
+        const messages = await api(`/api/admin/messages?${params}`);
+        document.getElementById('messages-body').innerHTML = messages.map(m => `
+          <tr id="msg-row-${m._id}">
+            <td class="muted">${esc(m.roomId)}</td>
+            <td>${esc(m.username || '—')}</td>
+            <td>${esc(m.text)}</td>
+            <td class="muted">${fmtDate(m.createdAt)}</td>
+            <td><button class="btn btn-danger" onclick="deleteMessage('${m._id}')">Take down</button></td>
+          </tr>`).join('') || '<tr><td colspan="5" class="empty">No messages found</td></tr>';
+      } catch (e) { toast(e.message); }
+    }
+
+    async function deleteMessage(id) {
+      if (!confirm('Remove this message for everyone?')) return;
+      try {
+        await api(`/api/admin/messages/${id}`, { method: 'DELETE' });
+        toast('Message taken down');
+        const row = document.getElementById(`msg-row-${id}`);
+        if (row) row.remove();
+      } catch (e) { toast(e.message); }
+    }
+
+    // ── Bans ──
+    document.getElementById('ban-type').addEventListener('change', (e) => {
+      document.getElementById('mute-minutes-wrap').style.display = e.target.value === 'mute' ? 'flex' : 'none';
+    });
+
+    async function submitBan() {
+      const username = document.getElementById('ban-username').value.trim();
+      const roomId = document.getElementById('ban-room').value.trim().toUpperCase();
+      const type = document.getElementById('ban-type').value;
+      const reason = document.getElementById('ban-reason').value.trim();
+      if (!username || !roomId) return toast('Username and room code (or ALL) are required.');
+
+      try {
+        if (type === 'ban') {
+          await api('/api/admin/ban', { method: 'POST', body: JSON.stringify({ username, roomId, reason }) });
+        } else {
+          const minutes = Number(document.getElementById('mute-minutes').value) || 30;
+          await api('/api/admin/mute', { method: 'POST', body: JSON.stringify({ username, roomId, minutes, reason }) });
+        }
+        toast('Applied');
+        document.getElementById('ban-username').value = '';
+        document.getElementById('ban-room').value = '';
+        loadBans();
+      } catch (e) { toast(e.message); }
+    }
+
+    async function loadBans() {
+      try {
+        const bans = await api('/api/admin/bans');
+        document.getElementById('bans-body').innerHTML = bans.map(b => `
+          <tr>
+            <td>${esc(b.username)}</td>
+            <td>${b.roomId === 'ALL' ? 'Entire app' : esc(b.roomId)}</td>
+            <td>${b.type === 'ban' ? 'Ban' : 'Mute'}</td>
+            <td class="muted">${b.expiresAt ? fmtDate(b.expiresAt) : 'Never'}</td>
+            <td><button class="btn" onclick="liftBan('${b._id}')">Lift</button></td>
+          </tr>`).join('') || '<tr><td colspan="5" class="empty">No active bans or mutes</td></tr>';
+      } catch (e) { toast(e.message); }
+    }
+
+    async function liftBan(id) {
+      try { await api(`/api/admin/bans/${id}`, { method: 'DELETE' }); toast('Lifted'); loadBans(); }
+      catch (e) { toast(e.message); }
+    }
+
+    // ── Audit log ──
+    async function loadAudit() {
+      try {
+        const entries = await api('/api/admin/audit-log');
+        document.getElementById('audit-body').innerHTML = entries.map(a => `
+          <tr><td>${esc(a.action)}</td><td>${esc(a.details || '')}</td><td class="muted">${fmtDate(a.createdAt)}</td></tr>
+        `).join('') || '<tr><td colspan="3" class="empty">No admin actions yet</td></tr>';
+      } catch (e) { toast(e.message); }
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s == null ? '' : String(s);
+      return d.innerHTML;
+    }
+
+    document.getElementById('logout').addEventListener('click', async () => {
+      await fetch(window.location.pathname + '/logout', { method: 'POST' });
+      window.location.href = window.location.pathname + '/login';
+    });
+
+    loadStats();
+  </script>
+</body>
+</html>

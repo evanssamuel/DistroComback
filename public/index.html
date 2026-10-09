@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="theme-color" content="#000000"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>Mikko — Social Chat Platform</title>
+  <link rel="icon" type="image/png" href="/favicon.png"/>
+
+  <!-- Socket.IO & Lucide Icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Gaegu:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+
+  <script src="/avatar.js"></script>
+
+  <style>
+    :root {
+      --bg:             #000000;
+      --surface-0:      #0C0C0C;
+      --surface-1:      #1C1C1C;
+      --surface-2:      #242424;
+      --text:           #FFFFFF;
+      --text-2:         #9A9A9A;
+      --text-3:         #747474;
+      --accent:         #FF3100;
+      --accent-hot:     #FF2400;
+      --accent-bubble:  #E52B00;
+      --flame:          #FF5E00;
+      --orange:         #FF7D00;
+      --blue:           #0090FF;
+      --cyan:           #0DBDFF;
+      --green:          #6CFF00;
+      --glass:          rgba(20,20,20,0.35);
+      --glass-blur:     8px;
+
+      --r-pill:         999px;
+      --r-card:         24px;
+      --r-tile:         22px;
+      --r-bar:          26px;
+
+      --font-display:   'Archivo Black', 'Syne', sans-serif;
+      --font-body:      'DM Sans', sans-serif;
+      --font-hand:      'Gaegu', cursive;
+
+      --nav-h:          60px;
+      --app-height:     100dvh;
+      --sat:            env(safe-area-inset-top, 0px);
+      --sab:            env(safe-area-inset-bottom, 0px);
+    }
+
+    *, *::before, *::after {
+      margin: 0; padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      height: var(--app-height);
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    /* APP CONTAINER & TAB SYSTEM */
+    #app-viewport {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      height: var(--app-height);
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      background: var(--bg);
+      position: relative;
+    }
+
+    .header-bar {
+      height: calc(56px + var(--sat));
+      padding-top: var(--sat);
+      padding-left: 18px;
+      padding-right: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg);
+      border-bottom: 1px solid var(--surface-0);
+      z-index: 20;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title span {
+      color: var(--accent);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .icon-btn-circle {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--surface-1);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .badge-dot {
+      position: absolute;
+      top: -2px; right: -2px;
+      background: var(--accent-hot);
+      color: white;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 10px;
+      min-width: 18px; text-align: center;
+    }
+
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    /* BOTTOM NAV BAR */
+    .bottom-nav {
+      height: calc(var(--nav-h) + var(--sab));
+      padding-bottom: var(--sab);
+      background: var(--bg);
+      border-top: 1px solid var(--surface-0);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      z-index: 30;
+    }
+
+    .nav-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      color: var(--text-2);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .nav-tab.active {
+      color: var(--text);
+    }
+
+    .nav-tab.active svg {
+      color: var(--accent);
+    }
+
+    /* HOME TAB COMPONENT */
+    .starter-banner {
+      background: linear-gradient(135deg, var(--surface-1), var(--surface-0));
+      border-radius: var(--r-card);
+      margin: 14px 18px;
+      padding: 18px;
+      border: 1px solid var(--surface-2);
+    }
+
+    .starter-banner h3 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .starter-banner p {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 12px;
+    }
+
+    .people-here-section {
+      padding: 0 18px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .people-row {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+
+    .person-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 68px;
+      cursor: pointer;
+    }
+
+    .person-avatar-wrap {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--surface-1);
+      position: relative;
+      border: 2px solid var(--surface-2);
+    }
+
+    .online-dot {
+      position: absolute;
+      bottom: 2px; right: 2px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid var(--bg);
+    }
+
+    .person-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70px;
+    }
+
+    /* CHAT MESSAGES & COMPOSER */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .msg-bubble-wrap {
+      display: flex;
+      gap: 8px;
+      max-width: 82%;
+    }
+
+    .msg-bubble-wrap.mine {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .msg-bubble-wrap.theirs {
+      align-self: flex-start;
+    }
+
+    .msg-avatar-small {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--surface-1);
+      align-self: flex-end;
+    }
+
+    .msg-bubble {
+      padding: 12px 16px;
+      border-radius: 20px;
+      font-size: 14.5px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .msg-bubble-wrap.mine .msg-bubble {
+      background: var(--accent-bubble);
+      color: white;
+      border-bottom-right-radius: 4px;
+      font-weight: 500;
+    }
+
+    .msg-bubble-wrap.theirs .msg-bubble {
+      background: var(--surface-1);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg-sender-name {
+      font-size: 11px;
+      color: var(--text-2);
+      margin-bottom: 2px;
+      padding-left: 4px;
+    }
+
+    /* SUGGESTION CHIPS STRIP */
+    .chips-strip {
+      padding: 8px 14px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      background: var(--bg);
+      border-top: 1px solid var(--surface-0);
+    }
+
+    .chip-btn {
+      height: 36px;
+      padding: 0 16px;
+      border-radius: var(--r-pill);
+      background: var(--surface-1);
+      color: var(--text);
+      font-size: 13.5px;
+      font-weight: 500;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, transform 0.15s;
+    }
+
+    .chip-btn:active {
+      transform: scale(0.96);
+      background: var(--accent);
+    }
+
+    /* COMPOSER */
+    .composer-bar {
+      padding: 10px 14px;
+      padding-bottom: max(10px, var(--sab));
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg);
+    }
+
+    .composer-input-wrap {
+      flex: 1;
+      height: 52px;
+      border-radius: var(--r-bar);
+      background: var(--surface-1);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 10px;
+    }
+
+    .composer-input-wrap input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 15px;
+      font-family: var(--font-body);
+    }
+
+    .send-circle-btn {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      border: none;
+      flex-shrink: 0;
+    }
+
+    /* ROOM CARDS & INBOX ITEMS */
+    .card-list {
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .room-card {
+      background: var(--surface-1);
+      border-radius: var(--r-card);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+    }
+
+    .room-card-icon {
+      width: 48px; height: 48px;
+      border-radius: 18px;
+      background: var(--surface-2);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display);
+      font-size: 20px;
+      color: var(--accent);
+    }
+
+    .room-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .room-card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .room-card-desc {
+      font-size: 12.5px;
+      color: var(--text-2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .room-card-online {
+      font-size: 12px;
+      color: var(--green);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* MODALS */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(6px);
+      align-items: center; justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal-box {
+      width: 100%;
+      max-width: 400px;
+      background: var(--surface-1);
+      border-radius: 28px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .primary-btn {
+      width: 100%;
+      height: 52px;
+      border-radius: var(--r-pill);
+      background: var(--accent);
+      color: white;
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
+    .secondary-btn {
+      width: 100%;
+      height: 48px;
+      border-radius: var(--r-pill);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+    }
+
+    .text-input {
+      width: 100%;
+      height: 48px;
+      border-radius: 14px;
+      background: var(--surface-0);
+      border: 1px solid var(--surface-2);
+      color: var(--text);
+      padding: 0 16px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    /* CONTINUE AS TILES */
+    .account-tile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface-0);
+      border-radius: 18px;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+
+    .account-tile-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+
+    .account-tile-name {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    /* AVATAR BUILDER SWATCHES */
+    .avatar-builder-preview {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      margin: 0 auto;
+      background: var(--surface-0);
+      overflow: hidden;
+    }
+
+    .swatch-row {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 0;
+    }
+
+    .swatch-item {
+      padding: 8px 14px;
+      border-radius: var(--r-pill);
+      background: var(--surface-2);
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .swatch-item.active {
+      background: var(--accent);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-viewport">
+
+  <!-- TOP HEADER BAR -->
+  <header class="header-bar">
+    <div class="brand-title">
+      Mikko <span>•</span>
+    </div>
+    <div class="header-actions">
+      <div class="icon-btn-circle" onclick="openExploreSearch()">
+        <i data-lucide="search" style="width:18px;height:18px;"></i>
+      </div>
+      <div class="icon-btn-circle" onclick="switchTab('chats')">
+        <i data-lucide="bell" style="width:18px;height:18px;"></i>
+        <div class="badge-dot" id="unread-badge" style="display:none;">0</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TAB 1: HOME (STARTER ROOM & PEOPLE HERE NOW) -->
+  <div class="tab-content active" id="tab-home">
+    <div class="people-here-section" style="margin-top: 14px;">
+      <div class="section-title">
+        <span>People Here Now 👋</span>
+        <span style="font-size:12px; color:var(--text-2);" id="online-count-label">0 online</span>
+      </div>
+      <div class="people-row" id="people-here-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- STARTER CHAT VIEW -->
+    <div class="chat-container">
+      <div style="padding: 10px 18px 4px; font-size:12px; color:var(--text-2); display:flex; align-items:center; gap:6px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+        <span># general room</span>
+      </div>
+
+      <div class="messages-area" id="home-messages">
+        <!-- Messages rendered dynamically -->
+      </div>
+
+      <!-- SUGGESTION CHIPS STRIP -->
+      <div class="chips-strip" id="home-chips-strip">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- COMPOSER -->
+      <div class="composer-bar">
+        <div class="composer-input-wrap">
+          <input type="text" id="home-message-input" placeholder="Say something in #general..." autocomplete="off"/>
+        </div>
+        <button class="send-circle-btn" onclick="sendHomeMessage()">
+          <i data-lucide="arrow-up" style="width:20px;height:20px;"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: EXPLORE (ROOMS DIRECTORY & SEARCH) -->
+  <div class="tab-content" id="tab-explore">
+    <div style="padding: 16px 18px;">
+      <input type="text" class="text-input" id="explore-search-input" placeholder="Search rooms by topic or city..." oninput="renderExploreRooms()"/>
+    </div>
+
+    <div style="padding: 0 18px; display:flex; justify-content:space-between; align-items:center;">
+      <span class="section-title" style="margin-bottom:0;">Public Rooms 💬</span>
+      <button class="chip-btn" style="background:var(--accent);" onclick="openCreateRoomModal()">+ Create Room</button>
+    </div>
+
+    <div class="card-list" id="explore-rooms-list">
+      <!-- Rendered dynamically -->
+    </div>
+  </div>
+
+  <!-- TAB 3: CHATS (INBOX & 1-ON-1 DMs) -->
+  <div class="tab-content" id="tab-chats">
+    <div id="inbox-list-view">
+      <div class="section-title" style="padding: 16px 18px 0;">Conversations 📬</div>
+      <div class="card-list" id="inbox-card-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- ACTIVE DM VIEW (when a DM is opened) -->
+    <div id="active-dm-view" style="display:none; flex:1; flex-direction:column; height:100%;">
+      <div style="padding: 12px 18px; border-bottom:1px solid var(--surface-0); display:flex; align-items:center; gap:12px;">
+        <button class="icon-btn-circle" onclick="closeActiveDm()" style="width:32px;height:32px;">
+          <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+        </button>
+        <div style="flex:1;">
+          <div style="font-weight:600; font-size:15px;" id="dm-partner-name">User</div>
+          <div style="font-size:11px; color:var(--text-2);">1-on-1 Direct Message</div>
+        </div>
+        <button class="chip-btn" style="background:var(--surface-2); font-size:12px;" onclick="openDmOptions()">Actions</button>
+      </div>
+
+      <div class="messages-area" id="dm-messages">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="chips-strip" id="dm-chips-strip">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="composer-bar">
+        <div class="composer-input-wrap">
+          <input type="text" id="dm-message-input" placeholder="Type a DM message..." autocomplete="off"/>
+        </div>
+        <button class="send-circle-btn" onclick="sendDmMessage()">
+          <i data-lucide="arrow-up" style="width:20px;height:20px;"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: PROFILE & SETTINGS -->
+  <div class="tab-content" id="tab-profile">
+    <div style="padding: 24px 18px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px;">
+      <div style="width:90px; height:90px; border-radius:50%; overflow:hidden; background:var(--surface-1); border:3px solid var(--accent);" id="profile-avatar-container">
+        <!-- Avatar SVG -->
+      </div>
+      <div>
+        <h2 style="font-family:var(--font-display); font-size:22px;" id="profile-username">User</h2>
+        <p style="font-size:13px; color:var(--text-2);" id="profile-status-tag">Guest Account</p>
+      </div>
+
+      <button class="chip-btn" style="background:var(--surface-2);" onclick="openAvatarBuilder()">✏️ Customize Avatar</button>
+    </div>
+
+    <!-- CLAIM ACCOUNT PROMPT IF GUEST -->
+    <div id="claim-account-card" class="starter-banner" style="display:none;">
+      <h3>Save Your Account 🔒</h3>
+      <p>Set a password and optional email so you never lose your history or handle!</p>
+      <input type="text" class="text-input" id="claim-username" placeholder="Choose official handle..." style="margin-bottom:8px;"/>
+      <input type="password" class="text-input" id="claim-password" placeholder="Choose password (min 6 chars)..." style="margin-bottom:8px;"/>
+      <input type="email" class="text-input" id="claim-email" placeholder="Optional email for recovery..." style="margin-bottom:12px;"/>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:12px; color:var(--text-2);">
+        <input type="checkbox" id="claim-age" checked/>
+        <label for="claim-age">I confirm I meet the minimum age limit.</label>
+      </div>
+      <button class="primary-btn" onclick="submitClaimAccount()">Claim Account</button>
+    </div>
+
+    <!-- ACCOUNT MANAGER & SWITCH ACCOUNT -->
+    <div style="padding: 0 18px 24px; display:flex; flex-direction:column; gap:12px;">
+      <div class="section-title">Saved Devices & Accounts 📱</div>
+      <div id="continue-as-container">
+        <!-- Rendered dynamically -->
+      </div>
+      <button class="secondary-btn" onclick="openLoginModal()">Sign into another account</button>
+      <button class="secondary-btn" style="color:var(--accent-hot);" onclick="handleLogout()">Log out of this device</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="bottom-nav">
+    <div class="nav-tab active" onclick="switchTab('home')" id="nav-home">
+      <i data-lucide="home" style="width:22px;height:22px;"></i>
+      <span>Home</span>
+    </div>
+    <div class="nav-tab" onclick="switchTab('explore')" id="nav-explore">
+      <i data-lucide="compass" style="width:22px;height:22px;"></i>
+      <span>Explore</span>
+    </div>
+    <div class="nav-tab" onclick="switchTab('chats')" id="nav-chats">
+      <i data-lucide="message-square" style="width:22px;height:22px;"></i>
+      <span>Chats</span>
+    </div>
+    <div class="nav-tab" onclick="switchTab('profile')" id="nav-profile">
+      <i data-lucide="user" style="width:22px;height:22px;"></i>
+      <span>Profile</span>
+    </div>
+  </nav>
+
+</div>
+
+<!-- AVATAR BUILDER MODAL -->
+<div class="modal-backdrop" id="avatar-builder-modal">
+  <div class="modal-box">
+    <h3 style="font-family:var(--font-display); font-size:18px; text-align:center;">Avatar Builder 🎨</h3>
+
+    <div class="avatar-builder-preview" id="builder-preview-svg"></div>
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <label style="font-size:12px; color:var(--text-2);">Skin Tone</label>
+      <div class="swatch-row" id="swatch-skin"></div>
+
+      <label style="font-size:12px; color:var(--text-2);">Hair Style</label>
+      <div class="swatch-row" id="swatch-hair"></div>
+
+      <label style="font-size:12px; color:var(--text-2);">Outfit</label>
+      <div class="swatch-row" id="swatch-outfit"></div>
+
+      <label style="font-size:12px; color:var(--text-2);">Accessories</label>
+      <div class="swatch-row" id="swatch-accessory"></div>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:8px;">
+      <button class="secondary-btn" onclick="closeAvatarBuilder()">Cancel</button>
+      <button class="primary-btn" onclick="saveAvatarBuilder()">Save Avatar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE ROOM MODAL -->
+<div class="modal-backdrop" id="create-room-modal">
+  <div class="modal-box">
+    <h3 style="font-family:var(--font-display); font-size:18px;">Create Public Room 💬</h3>
+    <input type="text" class="text-input" id="new-room-name" placeholder="Room Name (e.g. Lagos Chill Room)"/>
+    <input type="text" class="text-input" id="new-room-desc" placeholder="Short description..."/>
+    <div style="display:flex; gap:10px;">
+      <button class="secondary-btn" onclick="closeCreateRoomModal()">Cancel</button>
+      <button class="primary-btn" onclick="submitCreateRoom()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER ACTION / DM POPUP MODAL -->
+<div class="modal-backdrop" id="user-action-modal">
+  <div class="modal-box" style="text-align:center;">
+    <div style="width:64px;height:64px;border-radius:50%;margin:0 auto;background:var(--surface-2);" id="action-user-avatar"></div>
+    <h3 style="font-family:var(--font-display); font-size:18px;" id="action-user-name">User</h3>
+    <p style="font-size:13px; color:var(--text-2);" id="action-user-bio">Stranger in #general</p>
+
+    <button class="primary-btn" onclick="triggerSayHi()">Say Hi 👋</button>
+    <button class="secondary-btn" onclick="triggerBlockUser()">Block User</button>
+    <button class="secondary-btn" style="color:var(--accent-hot);" onclick="triggerReportUser()">Report User</button>
+    <button class="secondary-btn" onclick="closeUserActionModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- LOGIN / SWITCH ACCOUNT MODAL -->
+<div class="modal-backdrop" id="login-modal">
+  <div class="modal-box">
+    <h3 style="font-family:var(--font-display); font-size:18px;">Sign In 🔐</h3>
+    <input type="text" class="text-input" id="login-username" placeholder="Username"/>
+    <input type="password" class="text-input" id="login-password" placeholder="Password"/>
+    <div style="display:flex; gap:10px;">
+      <button class="secondary-btn" onclick="closeLoginModal()">Cancel</button>
+      <button class="primary-btn" onclick="submitLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  const socket = io();
+  let currentUser = null;
+  let currentProfile = null;
+  let currentActiveTab = 'home';
+  let activeDmConversationId = null;
+  let selectedTargetUser = null;
+
+  // Draft recipe for avatar builder
+  let avatarDraft = {
+    skin: 'tone-2',
+    face: 'round',
+    hair: 'short',
+    hairColor: '#1a1a1a',
+    eyes: 'normal',
+    outfit: 'tshirt',
+    outfitColor: '#FF3100',
+    accessory: 'none'
+  };
+
+  // Init App
+  async function initApp() {
+    try {
+      const res = await fetch('/api/auth/session');
+      const data = await res.json();
+      currentUser = data.user;
+      currentProfile = data.profile;
+
+      if (currentProfile.avatarRecipe) {
+        avatarDraft = { ...avatarDraft, ...currentProfile.avatarRecipe };
+      }
+
+      updateProfileUI();
+
+      // Join default socket room
+      socket.emit('join_room', {
+        roomId: 'general',
+        userId: currentUser.id,
+        username: currentUser.username,
+        avatarRecipe: currentProfile.avatarRecipe,
+        city: currentProfile.city
+      });
+
+      loadHomeChips();
+      loadExploreRooms();
+      loadInbox();
+    } catch (err) {
+      console.error('Failed to init session:', err);
+    }
+  }
+
+  function updateProfileUI() {
+    document.getElementById('profile-username').textContent = currentUser.username;
+    document.getElementById('profile-status-tag').textContent = currentUser.isGuest ? 'Guest Account (Unclaimed)' : 'Verified Member';
+
+    const svgHtml = renderAvatarSvg(currentProfile.avatarRecipe || avatarDraft);
+    document.getElementById('profile-avatar-container').innerHTML = svgHtml;
+
+    if (currentUser.isGuest) {
+      document.getElementById('claim-account-card').style.display = 'block';
+    } else {
+      document.getElementById('claim-account-card').style.display = 'none';
+    }
+
+    // Continue as saved accounts list
+    document.getElementById('continue-as-container').innerHTML = `
+      <div class="account-tile">
+        <div class="account-tile-avatar">${svgHtml}</div>
+        <div style="flex:1;">
+          <div class="account-tile-name">${currentUser.username}</div>
+          <div style="font-size:12px; color:var(--text-2);">${currentUser.isGuest ? 'Guest' : 'Member'} (Current Device)</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Navigation
+  function switchTab(tabName) {
+    currentActiveTab = tabName;
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+    document.getElementById(`nav-${tabName}`).classList.add('active');
+
+    if (tabName === 'explore') loadExploreRooms();
+    if (tabName === 'chats') loadInbox();
+  }
+
+  // Socket Events
+  socket.on('user_list', (users) => {
+    document.getElementById('online-count-label').textContent = `${users.length} online`;
+    const listEl = document.getElementById('people-here-list');
+    listEl.innerHTML = '';
+
+    users.forEach(u => {
+      const div = document.createElement('div');
+      div.className = 'person-chip';
+      div.onclick = () => openUserActionModal(u);
+      div.innerHTML = `
+        <div class="person-avatar-wrap">
+          ${u.avatarSvg || renderAvatarSvg({})}
+          <div class="online-dot"></div>
+        </div>
+        <div class="person-name">${escapeHtml(u.username)}</div>
+      `;
+      listEl.appendChild(div);
+    });
+  });
+
+  socket.on('message_history', (history) => {
+    const area = document.getElementById('home-messages');
+    area.innerHTML = '';
+    history.forEach(m => renderRoomMessageBubble(m, area));
+    area.scrollTop = area.scrollHeight;
+  });
+
+  socket.on('new_room_message', (msg) => {
+    const area = document.getElementById('home-messages');
+    renderRoomMessageBubble(msg, area);
+    area.scrollTop = area.scrollHeight;
+  });
+
+  function renderRoomMessageBubble(msg, container) {
+    const isMine = currentUser && msg.senderId === currentUser.id;
+    const wrap = document.createElement('div');
+    wrap.className = `msg-bubble-wrap ${isMine ? 'mine' : 'theirs'}`;
+
+    wrap.innerHTML = `
+      <div class="msg-bubble">
+        ${!isMine ? `<div class="msg-sender-name">${escapeHtml(msg.username || 'User')}</div>` : ''}
+        ${escapeHtml(msg.text)}
+      </div>
+    `;
+    container.appendChild(wrap);
+  }
+
+  // Chips Engine Integration
+  async function loadHomeChips() {
+    try {
+      const res = await fetch('/api/chips?isNewChat=true');
+      const data = await res.json();
+      renderChipsStrip(data.defaultStrip, 'home-chips-strip', sendHomeChipMessage);
+    } catch (err) { /* silent */ }
+  }
+
+  function renderChipsStrip(chipsList, elementId, onClickFn) {
+    const strip = document.getElementById(elementId);
+    strip.innerHTML = '';
+    chipsList.forEach(text => {
+      const btn = document.createElement('button');
+      btn.className = 'chip-btn';
+      btn.textContent = text;
+      btn.onclick = () => onClickFn(text);
+      strip.appendChild(btn);
+    });
+  }
+
+  function sendHomeChipMessage(text) {
+    socket.emit('send_room_message', { text });
+  }
+
+  function sendHomeMessage() {
+    const input = document.getElementById('home-message-input');
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit('send_room_message', { text });
+    input.value = '';
+  }
+
+  // Explore Rooms
+  async function loadExploreRooms() {
+    const res = await fetch('/api/rooms');
+    const rooms = await res.json();
+    window.allRooms = rooms;
+    renderExploreRooms();
+  }
+
+  function renderExploreRooms() {
+    const query = (document.getElementById('explore-search-input').value || '').toLowerCase();
+    const list = document.getElementById('explore-rooms-list');
+    list.innerHTML = '';
+
+    const filtered = (window.allRooms || []).filter(r => r.name.toLowerCase().includes(query) || r.description.toLowerCase().includes(query));
+
+    filtered.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'room-card';
+      card.onclick = () => switchTab('home');
+      card.innerHTML = `
+        <div class="room-card-icon">#</div>
+        <div class="room-card-info">
+          <div class="room-card-title">${escapeHtml(r.name)}</div>
+          <div class="room-card-desc">${escapeHtml(r.description || 'Public room')}</div>
+        </div>
+        <div class="room-card-online">● ${r.onlineCount}</div>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  // Inbox & DMs
+  async function loadInbox() {
+    const res = await fetch('/api/inbox');
+    const items = await res.json();
+    const cardList = document.getElementById('inbox-card-list');
+    cardList.innerHTML = '';
+
+    if (items.length === 0) {
+      cardList.innerHTML = `<p style="padding:20px; text-align:center; color:var(--text-2);">No 1-on-1 chats yet. Tap "Say Hi" on any person to start talking!</p>`;
+      return;
+    }
+
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'room-card';
+      card.onclick = () => openActiveDm(item.conversationId, item.otherUser);
+      card.innerHTML = `
+        <div class="room-card-icon" style="background:transparent;">
+          ${renderAvatarSvg(item.otherUser.avatarRecipe || {})}
+        </div>
+        <div class="room-card-info">
+          <div class="room-card-title">${escapeHtml(item.otherUser.username)}</div>
+          <div class="room-card-desc">${escapeHtml(item.lastMessageText || 'Tap to chat')}</div>
+        </div>
+        ${item.unreadCount > 0 ? `<div class="badge-dot" style="position:static;">${item.unreadCount}</div>` : ''}
+      `;
+      cardList.appendChild(card);
+    });
+  }
+
+  async function openActiveDm(conversationId, otherUser) {
+    activeDmConversationId = conversationId;
+    document.getElementById('inbox-list-view').style.display = 'none';
+    document.getElementById('active-dm-view').style.display = 'flex';
+    document.getElementById('dm-partner-name').textContent = otherUser.username;
+
+    // Fetch DM messages
+    const res = await fetch(`/api/dms/${conversationId}/messages`);
+    const msgs = await res.json();
+    const area = document.getElementById('dm-messages');
+    area.innerHTML = '';
+    msgs.forEach(m => renderRoomMessageBubble(m, area));
+    area.scrollTop = area.scrollHeight;
+
+    // Load chips
+    const chipRes = await fetch('/api/chips?isNewChat=false');
+    const chipData = await chipRes.json();
+    renderChipsStrip(chipData.defaultStrip, 'dm-chips-strip', sendDmChipMessage);
+
+    // Listen to real-time socket events for DM
+    socket.on(`dm_message_${conversationId}`, (msg) => {
+      renderRoomMessageBubble(msg, area);
+      area.scrollTop = area.scrollHeight;
+    });
+  }
+
+  function closeActiveDm() {
+    activeDmConversationId = null;
+    document.getElementById('active-dm-view').style.display = 'none';
+    document.getElementById('inbox-list-view').style.display = 'block';
+    loadInbox();
+  }
+
+  function sendDmChipMessage(text) {
+    if (!activeDmConversationId) return;
+    socket.emit('send_dm_message', {
+      conversationId: activeDmConversationId,
+      senderId: currentUser.id,
+      username: currentUser.username,
+      text
+    });
+  }
+
+  function sendDmMessage() {
+    const input = document.getElementById('dm-message-input');
+    const text = input.value.trim();
+    if (!text || !activeDmConversationId) return;
+    socket.emit('send_dm_message', {
+      conversationId: activeDmConversationId,
+      senderId: currentUser.id,
+      username: currentUser.username,
+      text
+    });
+    input.value = '';
+  }
+
+  // Modals
+  function openUserActionModal(user) {
+    selectedTargetUser = user;
+    document.getElementById('action-user-name').textContent = user.username;
+    document.getElementById('action-user-avatar').innerHTML = user.avatarSvg || renderAvatarSvg({});
+    document.getElementById('user-action-modal').classList.add('show');
+  }
+
+  function closeUserActionModal() {
+    document.getElementById('user-action-modal').classList.remove('show');
+  }
+
+  async function triggerSayHi() {
+    closeUserActionModal();
+    if (!selectedTargetUser || !selectedTargetUser.userId) return;
+    const res = await fetch('/api/dms/say-hi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetUserId: selectedTargetUser.userId })
+    });
+    const data = await res.json();
+    switchTab('chats');
+    openActiveDm(data.conversationId, selectedTargetUser);
+  }
+
+  async function triggerBlockUser() {
+    closeUserActionModal();
+    if (!selectedTargetUser) return;
+    await fetch('/api/safety/block', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetUserId: selectedTargetUser.userId })
+    });
+    alert(`Blocked ${selectedTargetUser.username}.`);
+  }
+
+  async function triggerReportUser() {
+    closeUserActionModal();
+    if (!selectedTargetUser) return;
+    await fetch('/api/safety/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetType: 'user',
+        targetId: selectedTargetUser.userId,
+        reason: 'Inappropriate conduct'
+      })
+    });
+    alert('Report submitted to moderation team.');
+  }
+
+  // Avatar Builder
+  function openAvatarBuilder() {
+    buildAvatarSwatches();
+    updateBuilderPreview();
+    document.getElementById('avatar-builder-modal').classList.add('show');
+  }
+
+  function closeAvatarBuilder() {
+    document.getElementById('avatar-builder-modal').classList.remove('show');
+  }
+
+  function updateBuilderPreview() {
+    document.getElementById('builder-preview-svg').innerHTML = renderAvatarSvg(avatarDraft);
+  }
+
+  function buildAvatarSwatches() {
+    const skinRow = document.getElementById('swatch-skin');
+    skinRow.innerHTML = Object.keys(SKIN_TONES).map(key => `
+      <div class="swatch-item ${avatarDraft.skin === key ? 'active' : ''}" onclick="setAvatarParam('skin', '${key}')">${key}</div>
+    `).join('');
+
+    const hairRow = document.getElementById('swatch-hair');
+    hairRow.innerHTML = ['short', 'afro', 'braids', 'wavy', 'bald'].map(h => `
+      <div class="swatch-item ${avatarDraft.hair === h ? 'active' : ''}" onclick="setAvatarParam('hair', '${h}')">${h}</div>
+    `).join('');
+
+    const outfitRow = document.getElementById('swatch-outfit');
+    outfitRow.innerHTML = ['tshirt', 'hoodie', 'jacket'].map(o => `
+      <div class="swatch-item ${avatarDraft.outfit === o ? 'active' : ''}" onclick="setAvatarParam('outfit', '${o}')">${o}</div>
+    `).join('');
+
+    const accRow = document.getElementById('swatch-accessory');
+    accRow.innerHTML = ['none', 'glasses', 'sunglasses', 'crown', 'hat'].map(a => `
+      <div class="swatch-item ${avatarDraft.accessory === a ? 'active' : ''}" onclick="setAvatarParam('accessory', '${a}')">${a}</div>
+    `).join('');
+  }
+
+  function setAvatarParam(key, val) {
+    avatarDraft[key] = val;
+    buildAvatarSwatches();
+    updateBuilderPreview();
+  }
+
+  async function saveAvatarBuilder() {
+    closeAvatarBuilder();
+    await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatarRecipe: avatarDraft })
+    });
+    currentProfile.avatarRecipe = avatarDraft;
+    updateProfileUI();
+  }
+
+  // Account Claim & Auth
+  async function submitClaimAccount() {
+    const username = document.getElementById('claim-username').value.trim();
+    const password = document.getElementById('claim-password').value.trim();
+    const email = document.getElementById('claim-email').value.trim();
+    const ageConfirmed = document.getElementById('claim-age').checked;
+
+    const res = await fetch('/api/auth/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, email, ageConfirmed })
+    });
+    const data = await res.json();
+    if (!res.ok) return alert(data.error);
+
+    alert(`Account claimed! Your recovery code is: ${data.recoveryCode}`);
+    currentUser.username = data.username;
+    currentUser.isGuest = false;
+    updateProfileUI();
+  }
+
+  function openCreateRoomModal() {
+    document.getElementById('create-room-modal').classList.add('show');
+  }
+
+  function closeCreateRoomModal() {
+    document.getElementById('create-room-modal').classList.remove('show');
+  }
+
+  async function submitCreateRoom() {
+    const name = document.getElementById('new-room-name').value.trim();
+    const description = document.getElementById('new-room-desc').value.trim();
+    if (!name) return alert('Room name required');
+
+    const res = await fetch('/api/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description })
+    });
+    closeCreateRoomModal();
+    loadExploreRooms();
+  }
+
+  function openLoginModal() { document.getElementById('login-modal').classList.add('show'); }
+  function closeLoginModal() { document.getElementById('login-modal').classList.remove('show'); }
+
+  async function submitLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) return alert(data.error);
+    closeLoginModal();
+    window.location.reload();
+  }
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.reload();
+  }
+
+  function escapeHtml(text) {
+    return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // Keybindings
+  document.getElementById('home-message-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendHomeMessage();
+  });
+  document.getElementById('dm-message-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendDmMessage();
+  });
+
+  initApp();
+</script>
+</body>
+</html>
